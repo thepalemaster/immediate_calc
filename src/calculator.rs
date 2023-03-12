@@ -1,5 +1,6 @@
 use eframe::egui;
 use egui_modal::Modal;
+use arboard::Clipboard;
 use crate::shapes;
 
 const STEP: f32 = 50.;
@@ -131,6 +132,10 @@ impl eframe::App for Calculator{
             }
             if ui.button("Сброс").clicked() {
                 self.clear();
+            }
+            if ui.button("Скопировать").clicked() {
+                let mut clipboard = Clipboard::new().unwrap();
+                println!("{:?}", clipboard.set_text(format!("{}", self.sum)));
             }
             ui.label(format!("Итого {}", self.sum));
             self.calculation_list(ui);

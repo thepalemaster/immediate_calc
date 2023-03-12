@@ -68,6 +68,7 @@ impl Default for AreaCircle {
 
 impl AreaShape for AreaCircle {
     fn form_state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(& mut self.state);
         &mut self.state
     }
     fn name (&self) -> & str{
@@ -129,6 +130,7 @@ impl AreaShape for AreaRectangle {
     }
    
     fn form_state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(& mut self.state);
         &mut self.state
     }
     
@@ -146,10 +148,10 @@ impl Default for AreaCylinder {
     fn default()-> Self {
         Self {
             state: [
-                FormElement::InputField("Сторона А", String::new()),
-                FormElement::InputField("Сторона B", String::new()),
+                FormElement::InputField("Диаметр", String::new()),
+                FormElement::InputField("Высота", String::new()),
                 FormElement::FactorField(String::new()),
-                FormElement::NoElement,
+                FormElement::CheckBox("Резьба", false),
                 FormElement::NoElement,
                 FormElement::NoElement,
             ]
@@ -162,22 +164,39 @@ impl AreaShape for AreaCylinder {
         let d = helpers::get_number(&self.state[0])?;
         let h = helpers::get_number(&self.state[1])?;
         let f = helpers::get_factor(&self.state[2])?;
-        let area = d * std::f64::consts::PI * h * f;
+        let mut area = d * std::f64::consts::PI * h * f;
         if !area.is_finite() {
+            return None;
+        }
+        let string_result;
+        if let FormElement::CheckBox(_, threaded) = self.state[3] {
+            if threaded {
+                area *= 1.5;
+                string_result = format!("Резьба S={} (d:{}, h:{}, k:{})", area, d, h, f);
+            } else {
+                string_result = format!("Цилиндр S={} (d:{}, h:{}, k:{})", area, d, h, f);
+            }
+        } else {
             return None;
         }
         Some(
             CalculationResult{
                 area,
-                result: format!("Цилиндр S={} (d:{}, h:{}, k:{})", area, d, h, f),
+                result: string_result,
                 shape: self.duplicate()
             }
         )
     }
     fn form_state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(& mut self.state);
         &mut self.state
     }
     fn name(&self) -> & str {
+        if let FormElement::CheckBox(_, threaded) = self.state[3] {
+            if threaded {
+                return "Резьба";
+            }
+        }
         "Цилидр"
     }
 }

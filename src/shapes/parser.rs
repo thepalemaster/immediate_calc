@@ -59,43 +59,43 @@ mod tests {
     use super::split_numbers;
 
     #[test]
-    fn test_1() {
+    fn test_parcer_1() {
         assert_eq!(split_numbers("43"), Some(43.0));
     }
     #[test]
-    fn test_2() {
+    fn test_parcer_2() {
         assert_eq!(split_numbers("43.5"), Some(43.5));
     }
     #[test]
-    fn test_3() {
+    fn test_parcer_3() {
         assert_eq!(split_numbers("4+3"), Some(7.0));
     }
     #[test]
-    fn test_4() {
+    fn test_parcer_4() {
         assert_eq!(split_numbers("4 - 3"), Some(1.0));
     }
     #[test]
-    fn test_5() {
+    fn test_parcer_5() {
         assert_eq!(split_numbers(" -4.0 + 3,0"), Some(-1.0));
     }
     #[test]
-    fn test_6() {
+    fn test_parcer_6() {
         assert_eq!(split_numbers("12,3 - 4.0 + 3,0"), Some(11.3));
     }
     #[test]
-    fn test_7() {
+    fn test_parcer_7() {
         assert_eq!(split_numbers("12,3  4.0"), None);
     }
     #[test]
-    fn test_8() {
+    fn test_parcer_8() {
         assert_eq!(split_numbers("-- 2,3 - 7"), None);
     }
     #[test]
-    fn test_9() {
+    fn test_parcer_9() {
         assert_eq!(split_numbers(",3  +.7- ,5"), Some(0.5));
     }
     #[test]
-    fn test_10() {
+    fn test_parcer_10() {
         assert_eq!(split_numbers("0,3 + 1..7"), None);
     }
 }

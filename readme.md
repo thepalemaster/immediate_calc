@@ -1,1 +1,1 @@
- 
+Yet Another Area Calculator 

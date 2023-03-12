@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eframe = "0.20"
-egui-modal = "0.1.8"
+arboard = "3.2.0"
+cli-clipboard = "0.4.0"
+eframe = "0.21"
+egui-modal = "0.2.1"
 tracing-subscriber = "0.3"
