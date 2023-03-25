@@ -1,14 +1,14 @@
 use super::FormElement;
 use super::parser::split_numbers;
 
-pub fn get_number(field: &FormElement) -> Option<f64>{
+pub fn get_number(field: &FormElement, factor: f64) -> Option<f64>{
     let x = match field {
         FormElement::InputField(_, x) => {//ref?
             split_numbers(x.as_str())
         },
         _ => return None
     };
-    x
+    x.and_then(|number| Some(number * factor))
 }
 
 pub fn get_factor(field: &FormElement) -> Option<f64>{

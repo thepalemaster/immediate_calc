@@ -16,7 +16,7 @@ pub trait AreaShapeClone {
 pub trait AreaShape: AreaShapeClone {
     fn form_state(&mut self) -> &mut [FormElement; 6];
     fn name(&self) -> & str;
-    fn calculate(&self) -> Option<CalculationResult>;
+    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult>;
 }
 
 impl<T> AreaShapeClone for T 
@@ -29,7 +29,7 @@ impl<T> AreaShapeClone for T
 
 pub struct CalculationResult {
     area: f64,
-    result: String,
+    pub result: String,
     shape: Box<dyn AreaShape> 
 }
 
@@ -43,8 +43,15 @@ impl CalculationResult {
     pub fn get_state(&mut self) -> &mut Box<dyn AreaShape> {
         &mut self.shape
     }
+    pub fn recalculate(&mut self, input_factor: f64, output_factor: f64) {
+        let result = self.shape.calculate(input_factor, output_factor);
+        if result.is_some() {
+            let some_result = result.unwrap();
+            self.area = some_result.get_area();
+            self.result = some_result.result;
+        }
+    }
 }
-
 
 #[derive(Clone)]
 pub struct AreaCircle {
@@ -74,10 +81,10 @@ impl AreaShape for AreaCircle {
     fn name (&self) -> & str{
         "Круг"
     }
-    fn calculate(&self) -> Option<CalculationResult> {
-        let d = helpers::get_number(&self.state[0])?;
+    fn calculate(&self, input_factor: f64, output_factor: f64 ) -> Option<CalculationResult> {
+        let d = helpers::get_number(&self.state[0], input_factor)?;
         let f = helpers::get_factor(&self.state[1])?;
-        let area = f * std::f64::consts::PI * d * d / 4.0;
+        let area = f * std::f64::consts::PI * d * d / 4.0 / output_factor;
         if !area.is_finite() {
             return None;
         }
@@ -112,11 +119,11 @@ impl Default for AreaRectangle {
 }
 
 impl AreaShape for AreaRectangle {
-    fn calculate(&self) -> Option<CalculationResult> {
-        let a = helpers::get_number(&self.state[0])?;
-        let b = helpers::get_number(&self.state[1])?;
+    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
+        let a = helpers::get_number(&self.state[0], input_factor)?;
+        let b = helpers::get_number(&self.state[1], input_factor)?;
         let f = helpers::get_factor(&self.state[2])?;
-        let area = a * b * f;
+        let area = a * b * f / output_factor;
         if !area.is_finite() {
             return None;
         }
@@ -160,11 +167,11 @@ impl Default for AreaCylinder {
 }
 
 impl AreaShape for AreaCylinder {
-    fn calculate(&self) -> Option<CalculationResult> {
-        let d = helpers::get_number(&self.state[0])?;
-        let h = helpers::get_number(&self.state[1])?;
+    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
+        let d = helpers::get_number(&self.state[0], input_factor)?;
+        let h = helpers::get_number(&self.state[1], input_factor)?;
         let f = helpers::get_factor(&self.state[2])?;
-        let mut area = d * std::f64::consts::PI * h * f;
+        let mut area = d * std::f64::consts::PI * h * f / output_factor;
         if !area.is_finite() {
             return None;
         }
@@ -200,3 +207,59 @@ impl AreaShape for AreaCylinder {
         "Цилидр"
     }
 }
+
+#[derive(Clone)]
+pub struct AreaHexagon {
+    state: [FormElement; 6]
+}
+
+impl Default for AreaHexagon {
+    fn default()-> Self {
+        Self {
+            state: [
+                FormElement::InputField("Диаметр", String::new()),
+                FormElement::CheckBox("Описанная окружность", false),
+                FormElement::NoElement,
+                FormElement::NoElement,
+                FormElement::NoElement,
+                FormElement::NoElement,
+            ]
+        }
+    }
+}
+
+impl AreaShape for AreaHexagon {
+    fn form_state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(& mut self.state);
+        &mut self.state
+    }
+    fn name (&self) -> & str{
+        "Шестиугольник"
+    }
+    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
+        let d = helpers::get_number(&self.state[0], input_factor)?;
+        if let FormElement::CheckBox(_,  circumscribed) = self.state[1] {
+            let area;
+            let result;
+            if circumscribed {
+                area = 3. * f64::sqrt(3.) / 2. * d * d / 4. / output_factor;
+                result = format!("Шестиугольник S={} (D:{})", area, d);
+            } else {
+                area = 2. * f64::sqrt(3.) * d * d / 4. / output_factor;
+                result = format!("Шестиугольник S={} (d:{})", area, d);
+            }
+            if !area.is_finite() {
+                return None;
+            }
+            return Some(
+                CalculationResult {
+                    area,
+                    result,
+                    shape: self.duplicate()
+                }
+            )
+        };
+        None
+    }
+}
+
