@@ -1,18 +1,15 @@
 use eframe::{egui, epaint::{Stroke, Color32}};
 use egui_modal::Modal;
 use arboard::Clipboard;
-use crate::shapes;
+use crate::{shapes, literals};
 
 mod measure;
-
-const STEP: f32 = 50.;
 
 enum ViewFlags {
     NoFlags,
     Remove(usize),
     Modal(usize)
 }
-
 
 pub struct Calculator {
     shapes: Vec<Box<dyn shapes::AreaShape>>,
@@ -25,14 +22,9 @@ pub struct Calculator {
 }
 
 impl Default for Calculator {
-    fn default()->Self {
+    fn default() -> Self {
         Self {
-            shapes: vec![
-                Box::new(shapes::AreaCircle::default()),
-                Box::new(shapes::AreaRectangle::default()),
-                Box::new(shapes::AreaCylinder::default()),
-                Box::new(shapes::AreaHexagon::default())
-            ],
+            shapes: shapes::get_shapes(),
             current: 0,
             flags: ViewFlags::NoFlags,
             results: Vec::new(),
@@ -106,7 +98,7 @@ impl Calculator {
             ui.horizontal( |ui| {
                 for (index, button) in item.iter().enumerate() { 
                     if ui.add(egui::widgets::Button::new(button.name())
-                                .min_size(egui::vec2(STEP * 3., 0.))).clicked() {
+                                .min_size(egui::vec2(literals::STEP * 3., 0.))).clicked() {
                         self.current = index + row_size * row;
                     }
                 }    
@@ -117,28 +109,26 @@ impl Calculator {
         ui.horizontal(|ui| {
             let current_input = self.input_units;
             let current_output = self.output_units;
-            egui::ComboBox::from_label("Единицы ввода")
+            egui::ComboBox::from_label(literals::INPUT_UNITS)
                 .selected_text(self.input_units.name())
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.input_units, measure::LengthUnits::MM, "мм");
-                    ui.selectable_value(&mut self.input_units, measure::LengthUnits::SM, "см");
-                    ui.selectable_value(&mut self.input_units, measure::LengthUnits::DM, "дм");
-                    ui.selectable_value(&mut self.input_units, measure::LengthUnits::M, "м");
+                    ui.selectable_value(&mut self.input_units, measure::LengthUnits::MM, literals::MM);
+                    ui.selectable_value(&mut self.input_units, measure::LengthUnits::SM, literals::SM);
+                    ui.selectable_value(&mut self.input_units, measure::LengthUnits::DM, literals::DM);
+                    ui.selectable_value(&mut self.input_units, measure::LengthUnits::M, literals::M);
                 });
             if current_input != self.input_units {
-                println!("changed");
                 self.update_units();
             }
-            egui::ComboBox::from_label("Единицы вывода")
+            egui::ComboBox::from_label(literals::OUTPUT_UNITS)
                 .selected_text(self.output_units.name())
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.output_units, measure::AreaUnits::MM2, "мм²");
-                    ui.selectable_value(&mut self.output_units, measure::AreaUnits::SM2, "см²");
-                    ui.selectable_value(&mut self.output_units, measure::AreaUnits::DM2, "дм²");
-                    ui.selectable_value(&mut self.output_units, measure::AreaUnits::M2, "м²");
+                    ui.selectable_value(&mut self.output_units, measure::AreaUnits::MM2, literals::MM2);
+                    ui.selectable_value(&mut self.output_units, measure::AreaUnits::SM2, literals::SM2);
+                    ui.selectable_value(&mut self.output_units, measure::AreaUnits::DM2, literals::DM2);
+                    ui.selectable_value(&mut self.output_units, measure::AreaUnits::M2, literals::M2);
                 });
             if current_output != self.output_units {
-                println!("changed");
                 self.update_units();
             }
         });
@@ -160,7 +150,7 @@ fn shape_input(shape: &mut [shapes::FormElement; 6], ui: &mut egui::Ui) {
             }
             shapes::FormElement::FactorField(txt) => {
                 ui.horizontal(|ui|{
-                    ui.text_edit_singleline(txt).labelled_by(ui.label("Коэфицент").id);
+                    ui.text_edit_singleline(txt).labelled_by(ui.label(literals::FACTOR).id);
                 });
             }
             shapes::FormElement::NoElement => {
@@ -179,17 +169,19 @@ impl eframe::App for Calculator{
             ui.label(self.shapes[self.current].name());
             let shape = self.shapes[self.current].form_state();
             shape_input(shape, ui);
-            if ui.add(egui::widgets::Button::new("Рассчитать")
-                .min_size(egui::vec2(STEP * 9. + 2. * spacing, 0.))).clicked() {
-                self.calculate();
-            }
             ui.horizontal(|ui|{
-                if ui.add(egui::widgets::Button::new("Очистить")
-                    .min_size(egui::vec2(STEP * 4.5 + spacing, 0.))).clicked() {
+                if ui.add(egui::widgets::Button::new(literals::CALCULATE)
+                    .min_size(egui::vec2(literals::STEP * 9. + 2. * spacing, 0.))).clicked() {
+                    self.calculate();
+                }
+            });
+            ui.horizontal(|ui|{
+                if ui.add(egui::widgets::Button::new(literals::CLEAR)
+                    .min_size(egui::vec2(literals::STEP * 4.5 + spacing, 0.))).clicked() {
                     self.clear();
                 }
-                if ui.add(egui::widgets::Button::new("Скопировать")
-                    .min_size(egui::vec2(STEP * 4.5, 0.))).clicked() {
+                if ui.add(egui::widgets::Button::new(literals::COPY)
+                    .min_size(egui::vec2(literals::STEP * 4.5, 0.))).clicked() {
                     let clipboard = Clipboard::new();
                     match clipboard {
                         Ok(mut buffer) => {
@@ -207,22 +199,22 @@ impl eframe::App for Calculator{
                 }
             });
             self.measure_units(ui);
-            ui.label(format!("Итого {}", self.sum));
+            ui.label(format!("{} {}", literals::TOTAL, self.sum));
             self.calculation_list(ui);
             match self.flags {
                 ViewFlags::Modal(index) => {
                     let modal = Modal::new(ctx, "edit_modal");
                     modal.show( |ui| {
-                        modal.title(ui, "Редактировать");
+                        modal.title(ui, literals::EDIT);
                         modal.frame(ui, |ui| {
                             let shape = self.results[index].get_state().form_state();
                             shape_input(shape, ui);
                         });
                         modal.buttons(ui, |ui| {
-                            if modal.button(ui, "Отмена").clicked() {
+                            if modal.button(ui, literals::CANCEL).clicked() {
                                 self.flags = ViewFlags::NoFlags;
                             }
-                            if modal.button(ui, "Сохранить").clicked() {
+                            if modal.button(ui, literals::SAVE).clicked() {
                                 let shape = self.results[index].get_state();
                                 let result = shape.calculate(self.input_units.value(), self.output_units.value());
                                 if result.is_some() {

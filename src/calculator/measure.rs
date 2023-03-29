@@ -1,3 +1,4 @@
+use crate::literals;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum LengthUnits {
@@ -28,10 +29,10 @@ impl LengthUnits {
 
     pub fn name(&self) -> &str{
         match self {
-            LengthUnits::MM => "мм",
-            LengthUnits::SM => "см",
-            LengthUnits::DM => "дм",
-            LengthUnits::M => "м"
+            LengthUnits::MM => literals::MM,
+            LengthUnits::SM => literals::SM,
+            LengthUnits::DM => literals::DM,
+            LengthUnits::M => literals::M
         }
     }
 }
@@ -47,10 +48,10 @@ impl AreaUnits {
     }
     pub fn name(&self) -> &str {
         match self {
-            AreaUnits::MM2 => "мм²",
-            AreaUnits::SM2 => "см²",
-            AreaUnits::DM2 => "дм²",
-            AreaUnits::M2 => "м²"
+            AreaUnits::MM2 => literals::MM2,
+            AreaUnits::SM2 => literals::SM2,
+            AreaUnits::DM2 => literals::DM2,
+            AreaUnits::M2 => literals::M2
         }
     }
 }
