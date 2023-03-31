@@ -33,7 +33,8 @@ pub fn get_shapes () -> Vec<Box<dyn AreaShape>> {
         Box::new(AreaCircle::default()),
         Box::new(AreaRectangle::default()),
         Box::new(AreaCylinder::default()),
-        Box::new(AreaHexagon::default())
+        Box::new(AreaHexagon::default()),
+        Box::new(AreaHexagonPrism::default()),
     ]
 }
 

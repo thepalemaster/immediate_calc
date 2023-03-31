@@ -344,3 +344,84 @@ impl AreaShape for AreaHexagon {
     }
 }
 
+const HEX_PRISM: &str = if cfg!(feature = "lang_rus") {
+    "Шестиугольная призма"
+} else {
+    "Hexagon prism"
+};
+
+const HEX_PRISM_HEIGHT: &str = if cfg!(feature = "lang_rus") {
+    "Высота"
+} else {
+    "Height"
+};
+
+fn hexagon_prism_string (area: f64, d: f64, h: f64, f: f64, circumscribed: bool) -> String {
+    if circumscribed {
+        if cfg! (feature = "lang_rus") {
+            format!("Призма (N=6) S={} (D:{}, h:{}, k:{})", area, d, h, f)
+        } else {
+            format!("Hexagon prism S={} (D:{}, h:{}, k:{})", area, d, h, f)
+        }
+    } else {
+        if cfg! (feature = "lang_rus") {
+            format!("Призма (N=6) S={} (d:{}, h:{}, k:{})", area, d, h, f)
+        } else {
+            format!("Hexagon prism S={} (d:{}, h:{}, k:{})", area, d, h, f)
+        }
+    }
+}
+#[derive(Clone)]
+pub struct AreaHexagonPrism {
+    state: [FormElement; 6]
+}
+
+impl Default for AreaHexagonPrism {
+    fn default()-> Self {
+        Self {
+            state: [
+                FormElement::InputField(DIAMETER_HEX, String::new()),
+                FormElement::InputField(HEX_PRISM_HEIGHT, String::new()),
+                FormElement::FactorField(String::new()),
+                FormElement::CheckBox(CIRCUMSCRIBED, false),
+                FormElement::NoElement,
+                FormElement::NoElement,
+            ]
+        }
+    }
+}
+impl AreaShape for AreaHexagonPrism {
+    fn form_state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(& mut self.state);
+        &mut self.state
+    }
+
+    fn name (&self) -> & str{
+        HEX_PRISM
+    }
+
+    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
+        let d = helpers::get_number(&self.state[0], input_factor)?;
+        let h = helpers::get_number(&self.state[1], input_factor)?;
+        let f = helpers::get_factor(&self.state[2])?;
+        if let FormElement::CheckBox(_,  circumscribed) = self.state[3] {
+            let area;
+            if circumscribed {
+                area = 6. * d / 2. * h * f / output_factor;
+            } else {
+                area = 6. * d * 2. / f64::sqrt(3.) / 2. * h * f / output_factor;
+            }
+            if !area.is_finite() {
+                return None;
+            }
+            return Some(
+                CalculationResult {
+                    area,
+                    result: hexagon_prism_string(area, d, h, f, circumscribed),
+                    shape: self.duplicate()
+                }
+            )
+        };
+        None
+    }
+}
