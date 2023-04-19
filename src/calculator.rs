@@ -1,4 +1,5 @@
 use eframe::egui;
+use eframe::egui::Key;
 use egui_modal::Modal;
 use arboard::Clipboard;
 use crate::{shapes, literals};
@@ -68,7 +69,7 @@ impl Calculator {
             ui.horizontal( |ui| {
                 for (index, button) in item.iter().enumerate() { 
                     if ui.add(egui::widgets::Button::new(button.name())
-                                .min_size(egui::vec2(literals::STEP * 3., 0.))).clicked() {
+                                .min_size(egui::vec2(literals::STEP * 3., literals::STEP * 0.5))).clicked() {
                         self.current = index + row_size * row;
                     }
                 }    
@@ -119,7 +120,7 @@ fn shape_input(shape: &mut [shapes::FormElement; 6], ui: &mut egui::Ui) {
                 });
             }
             shapes::FormElement::NoElement => {
-                ui.label(" ");
+                ui.add_visible(false, egui::TextEdit::singleline(&mut String::new()));
             }
         }
     }
@@ -144,17 +145,17 @@ impl eframe::App for Calculator{
             }
             ui.horizontal(|ui|{
                 if ui.add(egui::widgets::Button::new(literals::CALCULATE)
-                    .min_size(egui::vec2(literals::STEP * 9. + 2. * spacing, 0.))).clicked() {
+                    .min_size(egui::vec2(literals::STEP * 9. + 2. * spacing, literals::STEP * 0.5))).clicked() {
                     self.calculate();
                 }
             });
             ui.horizontal(|ui|{
                 if ui.add(egui::widgets::Button::new(literals::CLEAR)
-                    .min_size(egui::vec2(literals::STEP * 4.5 + spacing, 0.))).clicked() {
+                    .min_size(egui::vec2(literals::STEP * 4.5 + spacing, literals::STEP * 0.5))).clicked() {
                     self.state.clear();
                 }
                 if ui.add(egui::widgets::Button::new(literals::COPY)
-                    .min_size(egui::vec2(literals::STEP * 4.5, 0.))).clicked() {
+                    .min_size(egui::vec2(literals::STEP * 4.5, literals::STEP * 0.5))).clicked() {
                     let clipboard = Clipboard::new();
                     match clipboard {
                         Ok(mut buffer) => {
@@ -181,6 +182,7 @@ impl eframe::App for Calculator{
                     modal.show( |ui| {
                         modal.title(ui, literals::EDIT);
                         modal.frame(ui, |ui| {
+                            ui.label(self.state.result_name(index));
                             let shape = self.state.form_state_from_result(index);
                             match shape {
                                 Some(form) => {    
@@ -206,5 +208,8 @@ impl eframe::App for Calculator{
                 _ => {}
             }
         });
+        if ctx.input(|i| i.key_released(Key::Enter)) {
+            self.calculate();
+        }
     }
 }

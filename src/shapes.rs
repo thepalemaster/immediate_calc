@@ -35,6 +35,7 @@ pub fn get_shapes () -> Vec<Box<dyn AreaShape>> {
         Box::new(AreaCylinder::default()),
         Box::new(AreaHexagon::default()),
         Box::new(AreaHexagonPrism::default()),
+        Box::new(AreaBushing::default()),
     ]
 }
 
@@ -48,12 +49,19 @@ impl CalculationResult {
     pub fn get_result(&self) -> &str {
         self.result.as_str()
     }
+    
     pub fn get_area(&self) -> f64 {
         self.area
     }
+    
     pub fn get_state(&mut self) -> &mut Box<dyn AreaShape> {
         &mut self.shape
     }
+
+    pub fn name(&self) -> &str {
+        self.shape.name()
+    }
+
     pub fn recalculate(&mut self, input_factor: f64, output_factor: f64) {
         let result = self.shape.calculate(input_factor, output_factor);
         if result.is_some() {

@@ -34,17 +34,24 @@ impl CalculatorState {
     }
 
     pub fn form_state(&mut self, index:usize) -> Option<&mut [shapes::FormElement; 6]> {
-            if index >= self.shapes.len() {
-                return None;
-            }
-            Some(self.shapes[index].form_state())
+        if index >= self.shapes.len() {
+            return None;
+        }
+        Some(self.shapes[index].form_state())
     }
 
     pub fn form_state_from_result(&mut self, index:usize) -> Option<&mut [shapes::FormElement; 6]> {
-            if index >= self.shapes.len() {
-                return None;
-            }
-            Some(self.results[index].get_state().form_state())
+        if index >= self.shapes.len() {
+            return None;
+        }
+        Some(self.results[index].get_state().form_state())
+    }
+
+    pub fn result_name(&self, index: usize) -> &str {
+        if index >= self.shapes.len() {
+            return " ";
+        }
+        self.results[index].name()
     }
 
     pub fn recalculate (&mut self, result_index:usize) {

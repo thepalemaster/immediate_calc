@@ -165,13 +165,11 @@ const CYLINDER: &str = if cfg!(feature = "lang_rus") {
     "Cylinder"
 };
 
-
 const THREADED: &str = if cfg!(feature = "lang_rus") {
     "Резьба"
 } else {
     "Threaded"
 };
-
 
 fn cylinder_string (area: f64, d: f64, h: f64, f: f64, threaded: bool) -> String {
     if threaded {
@@ -423,5 +421,86 @@ impl AreaShape for AreaHexagonPrism {
             )
         };
         None
+    }
+}
+
+const BUSHING: &str = if cfg!(feature = "lang_rus") {
+    "Втулка"
+} else {
+    "Bushing"
+};
+
+const BUSHING_HEIGHT: &str = if cfg!(feature = "lang_rus") {
+    "Высота"
+} else {
+    "Height"
+};
+
+const BUSHING_DIAMETER: &str = if cfg!(feature = "lang_rus") {
+    "Диаметр втулки"
+} else {
+    "Outer diameter"
+};
+
+const BUSHING_INNER_DIAMETER: &str = if cfg!(feature = "lang_rus") {
+    "Диаметр отверстия"
+} else {
+    "Inner diameter"
+};
+
+fn bushing_string (area: f64, d1: f64, d2: f64, h: f64, f: f64) -> String{
+    if cfg!(feature = "lang_rus") {
+        format!("Втулка S={} (D:{}, d:{}, h:{}, k:{})", area, d1, d2, h, f)
+    } else {
+        format!("Bushing S={} (D:{}, d:{}, h:{}, k:{})", area, d1, d2, h, f)
+    }
+}
+#[derive(Clone)]
+pub struct AreaBushing {
+    state: [FormElement; 6]
+}
+
+impl Default for AreaBushing {
+    fn default()-> Self {
+        Self {
+            state: [
+                FormElement::InputField(BUSHING_DIAMETER, String::new()),
+                FormElement::InputField(BUSHING_INNER_DIAMETER, String::new()),
+                FormElement::InputField(BUSHING_HEIGHT, String::new()),
+                FormElement::FactorField(String::new()),
+                FormElement::NoElement,
+                FormElement::NoElement,
+            ]
+        }
+    }
+}
+
+impl AreaShape for AreaBushing {
+    fn form_state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(& mut self.state);
+        &mut self.state
+    }
+
+    fn name (&self) -> & str{
+        BUSHING
+    }
+
+    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
+        let d1 = helpers::get_number(&self.state[0], input_factor)?;
+        let d2 = helpers::get_number(&self.state[1], input_factor)?;
+        let h = helpers::get_number(&self.state[2], input_factor)?;
+        let f = helpers::get_factor(&self.state[3])?;
+        let area = ((d1 + d2) * std::f64::consts::PI * h * f
+            + f * std::f64::consts::PI * (d1 * d1 - d2 * d2) / 4.0) / output_factor;
+        if !area.is_finite() ||  d1 <= d2  {
+            return None;
+        }
+        Some(
+            CalculationResult{
+                area,
+                result: bushing_string(area, d1, d2, h, f),
+                shape: self.duplicate()
+            }
+        )
     }
 }
