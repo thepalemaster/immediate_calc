@@ -1,17 +1,30 @@
+use std::sync::Arc;
+
 use eframe::egui;
+use egui::IconData;
+mod calculator;
 pub mod literals;
 mod shapes;
-mod calculator;
 
-fn main() -> Result<(), eframe::Error>{
-    let options = eframe::NativeOptions{
-        min_window_size: Some(egui::vec2(literals::STEP * 10.0, literals::STEP * 6.)),
-        initial_window_size: Some(egui::vec2(literals::STEP * 10.0, literals::STEP * 12.)),
-        ..eframe::NativeOptions::default()
+fn main() -> Result<(), eframe::Error> {
+    let icon = include_bytes!("../assets/icon.rgb").to_vec();
+    let window_size = egui::ViewportBuilder {
+        min_inner_size: Some(egui::vec2(literals::STEP * 9.6, literals::STEP * 8.)),
+        max_inner_size: Some(egui::vec2(literals::STEP * 9.6, literals::STEP * 24.)),
+        icon: Some(Arc::new(IconData {
+            rgba: icon,
+            width: 256,
+            height: 256,
+        })),
+        ..Default::default()
+    };
+    let options = eframe::NativeOptions {
+        viewport: window_size,
+        ..Default::default()
     };
     eframe::run_native(
         literals::APP_TITLE,
         options,
-        Box::new(|_cc| Box::new(calculator::Calculator::default()))
+        Box::new(|_cc| Box::<calculator::Calculator>::default()),
     )
 }

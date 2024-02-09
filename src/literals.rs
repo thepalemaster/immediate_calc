@@ -1,7 +1,9 @@
+pub mod messages;
+
 pub const STEP: f32 = 50.;
 
 pub const APP_TITLE: &str = if cfg!(feature = "lang_rus") {
-    "Калькулятро площади"
+    "Калькулятор площади"
 } else {
     "Area calculator"
 };
@@ -10,7 +12,7 @@ pub const INPUT_UNITS: &str = if cfg!(feature = "lang_rus") {
     "Единицы ввода"
 } else {
     "Input units"
-}; 
+};
 
 pub const OUTPUT_UNITS: &str = if cfg!(feature = "lang_rus") {
     "Единицы вывода"
@@ -112,4 +114,10 @@ pub const M2: &str = if cfg!(feature = "lang_rus") {
     "м²"
 } else {
     "m²"
+};
+
+pub const PARSE_ERROR: &str = if cfg!(feature = "lang_rus") {
+    "Ввод некорректных данных"
+} else {
+    "Wrong input"
 };

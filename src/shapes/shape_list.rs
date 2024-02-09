@@ -1,10 +1,8 @@
 mod helpers;
 mod parser;
 
-use super::AreaShapeClone;
-use super::AreaShape;
-use super::CalculationResult;
 use super::FormElement;
+use super::InnerImplShape;
 
 const CIRCLE: &str = if cfg!(feature = "lang_rus") {
     "Круг"
@@ -18,21 +16,15 @@ const DIAMETER_CIR: &str = if cfg!(feature = "lang_rus") {
     "Diameter"
 };
 
-fn circle_string (area: f64, d: f64, f: f64) -> String{
-    if cfg!(feature = "lang_rus") {
-        format!("Круг S={} (d:{}, k:{})", area, d, f)
-    } else {
-        format!("Circle S={} (d:{}, k:{})", area, d, f)
-    }
-}
-
 #[derive(Clone)]
 pub struct AreaCircle {
-    state: [FormElement; 6]
+    state: [FormElement; 6],
+    diameter: f64,
+    factor: f64,
 }
 
 impl Default for AreaCircle {
-    fn default()-> Self {
+    fn default() -> Self {
         Self {
             state: [
                 FormElement::InputField(DIAMETER_CIR, String::new()),
@@ -41,36 +33,43 @@ impl Default for AreaCircle {
                 FormElement::NoElement,
                 FormElement::NoElement,
                 FormElement::NoElement,
-            ]
+            ],
+            diameter: 0.,
+            factor: 1.,
         }
     }
 }
 
-impl AreaShape for AreaCircle {
-    fn form_state(&mut self) -> &mut [FormElement; 6] {
-        helpers::std_validate_state(& mut self.state);
+impl InnerImplShape for AreaCircle {
+    fn state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(&mut self.state);
         &mut self.state
     }
-    fn name (&self) -> & str{
+
+    fn get_name(&self) -> &str {
         CIRCLE
     }
-    fn calculate(&self, input_factor: f64, output_factor: f64 ) -> Option<CalculationResult> {
-        let d = helpers::get_number(&self.state[0], input_factor)?;
-        let f = helpers::get_factor(&self.state[1])?;
-        let area = f * std::f64::consts::PI * d * d / 4.0 / output_factor;
-        if !area.is_finite() {
-            return None;
+
+    fn parse_input(&mut self, input_factor: f64) -> Result<(), &'static str> {
+        let mut negative = false;
+        self.diameter = helpers::get_lenght(&self.state[0], input_factor, &mut negative)?;
+        self.factor = helpers::get_factor(&self.state[1], negative)?;
+        Ok(())
+    }
+
+    fn get_area(&self) -> f64 {
+        self.factor * self.diameter * self.diameter * std::f64::consts::PI / 4.
+    }
+
+    fn get_result(&self, input_factor: f64, area: f64) -> String {
+        let d = self.diameter / input_factor;
+        if cfg!(feature = "lang_rus") {
+            format!("Круг S={} (d:{}, k:{})", area, d, self.factor)
+        } else {
+            format!("Circle S={} (d:{}, k:{})", area, d, self.factor)
         }
-        Some(
-            CalculationResult {
-                area,
-                result: circle_string(area, d, f),
-                shape: self.duplicate()
-            }
-        )
     }
 }
-
 
 const RECTANGLE: &str = if cfg!(feature = "lang_rus") {
     "Прямоугольник"
@@ -90,21 +89,16 @@ const HEIGHT_REC: &str = if cfg!(feature = "lang_rus") {
     "Height"
 };
 
-fn rectangle_string (area: f64, h: f64, l: f64, f: f64) -> String {
-    if cfg!(feature = "lang_rus") {
-        format!("Прямоугольник S={} (a:{}, b:{}, k:{})", area, l, h, f)
-    } else {
-        format!("Rectangle S={} (l:{}, h:{}, k:{})", area, l, h, f)
-    }
-}
-
 #[derive(Clone)]
 pub struct AreaRectangle {
-    state: [FormElement; 6]
+    state: [FormElement; 6],
+    lenght: f64,
+    height: f64,
+    factor: f64,
 }
 
 impl Default for AreaRectangle {
-    fn default()-> Self {
+    fn default() -> Self {
         Self {
             state: [
                 FormElement::InputField(LENGHT_REC, String::new()),
@@ -113,39 +107,48 @@ impl Default for AreaRectangle {
                 FormElement::NoElement,
                 FormElement::NoElement,
                 FormElement::NoElement,
-            ]
+            ],
+            lenght: 0.,
+            height: 0.,
+            factor: 1.,
         }
     }
 }
 
-impl AreaShape for AreaRectangle {
-    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
-        let a = helpers::get_number(&self.state[0], input_factor)?;
-        let b = helpers::get_number(&self.state[1], input_factor)?;
-        let f = helpers::get_factor(&self.state[2])?;
-        let area = a * b * f / output_factor;
-        if !area.is_finite() {
-            return None;
-        }
-        Some(
-            CalculationResult {
-                area,
-                result: rectangle_string(area, b, a, f),
-                shape: self.duplicate()
-            }
-        )
+impl InnerImplShape for AreaRectangle {
+    fn parse_input(&mut self, input_factor: f64) -> Result<(), &'static str> {
+        let mut negative = false;
+        self.lenght = helpers::get_lenght(&self.state[0], input_factor, &mut negative)?;
+        self.height = helpers::get_lenght(&self.state[1], input_factor, &mut negative)?;
+        self.factor = helpers::get_factor(&self.state[2], negative)?;
+        Ok(())
     }
-   
-    fn form_state(&mut self) -> &mut [FormElement; 6] {
-        helpers::std_validate_state(& mut self.state);
+
+    fn get_area(&self) -> f64 {
+        self.height * self.lenght * self.factor
+    }
+
+    fn state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(&mut self.state);
         &mut self.state
     }
-    
-    fn name(&self) -> & str {
+
+    fn get_name(&self) -> &str {
         RECTANGLE
     }
+    fn get_result(&self, input_factor: f64, area: f64) -> String {
+        let b = self.height / input_factor;
+        let a = self.lenght / input_factor;
+        if cfg!(feature = "lang_rus") {
+            format!(
+                "Прямоугольник S={} (a:{}, b:{}, k:{})",
+                area, a, b, self.factor
+            )
+        } else {
+            format!("Rectangle S={} (l:{}, h:{}, k:{})", area, a, b, self.factor)
+        }
+    }
 }
-
 
 const HEIGHT_CYL: &str = if cfg!(feature = "lang_rus") {
     "Высота"
@@ -171,79 +174,79 @@ const THREADED: &str = if cfg!(feature = "lang_rus") {
     "Threaded"
 };
 
-fn cylinder_string (area: f64, d: f64, h: f64, f: f64, threaded: bool) -> String {
-    if threaded {
-        if cfg! (feature = "lang_rus") {
-            format!("Резьба S={} (d:{}, h:{}, k:{})", area, d, h, f)
-        } else {
-            format!("Threaded S={} (d:{}, h:{}, k:{})", area, d, h, f)
-        }
-    } else {
-        if cfg! (feature = "lang_rus") {
-            format!("Цилиндр S={} (d:{}, h:{}, k:{})", area, d, h, f)
-        } else {
-            format!("Cylinder S={} (d:{}, h:{}, k:{})", area, d, h, f)
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct AreaCylinder {
-    state: [FormElement; 6]
+    state: [FormElement; 6],
+    diameter: f64,
+    height: f64,
+    factor: f64,
+    threaded: bool,
 }
 
 impl Default for AreaCylinder {
-    fn default()-> Self {
+    fn default() -> Self {
         Self {
             state: [
                 FormElement::InputField(DIAMETER_CYL, String::new()),
                 FormElement::InputField(HEIGHT_CYL, String::new()),
                 FormElement::FactorField(String::new()),
-                FormElement::CheckBox("Резьба", false),
+                FormElement::CheckBox(THREADED, false),
                 FormElement::NoElement,
                 FormElement::NoElement,
-            ]
+            ],
+            diameter: 0.,
+            height: 0.,
+            factor: 1.,
+            threaded: false,
         }
     }
 }
 
-impl AreaShape for AreaCylinder {
-    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
-        let d = helpers::get_number(&self.state[0], input_factor)?;
-        let h = helpers::get_number(&self.state[1], input_factor)?;
-        let f = helpers::get_factor(&self.state[2])?;
-        let mut area = d * std::f64::consts::PI * h * f / output_factor;
-        if !area.is_finite() {
-            return None;
-        }
-        if let FormElement::CheckBox(_, threaded) = self.state[3] {
-            if threaded {
-                area *= 1.5;
-            }
-            Some(
-                CalculationResult{
-                    area,
-                    result: cylinder_string(area, d, h, f, threaded),
-                    shape: self.duplicate()
-                }
-            )
+impl InnerImplShape for AreaCylinder {
+    fn parse_input(&mut self, input_factor: f64) -> Result<(), &'static str> {
+        let mut negative = false;
+        self.diameter = helpers::get_lenght(&self.state[0], input_factor, &mut negative)?;
+        self.height = helpers::get_lenght(&self.state[1], input_factor, &mut negative)?;
+        self.factor = helpers::get_factor(&self.state[2], negative)?;
+        self.threaded = helpers::get_option(&self.state[3])?;
+        Ok(())
+    }
+
+    fn get_name(&self) -> &str {
+        if self.threaded {
+            THREADED
         } else {
-            None
+            CYLINDER
         }
     }
 
-    fn form_state(&mut self) -> &mut [FormElement; 6] {
-        helpers::std_validate_state(& mut self.state);
+    fn state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(&mut self.state);
         &mut self.state
     }
 
-    fn name(&self) -> & str {
-        if let FormElement::CheckBox(_, threaded) = self.state[3] {
-            if threaded {
-                return THREADED;
-            }
+    fn get_area(&self) -> f64 {
+        let mut area = self.diameter * std::f64::consts::PI * self.height * self.factor;
+        if self.threaded {
+            area *= 1.5;
         }
-        CYLINDER
+        area
+    }
+
+    fn get_result(&self, input_factor: f64, area: f64) -> String {
+        let d = self.diameter / input_factor;
+        let h = self.height / input_factor;
+        if self.threaded {
+            if cfg!(feature = "lang_rus") {
+                format!("Резьба S={} (d:{}, h:{}, k:{})", area, d, h, self.factor)
+            } else {
+                format!("Threaded S={} (d:{}, h:{}, k:{})", area, d, h, self.factor)
+            }
+        } else if cfg!(feature = "lang_rus") {
+            format!("Цилиндр S={} (d:{}, h:{}, k:{})", area, d, h, self.factor)
+        } else {
+            format!("Cylinder S={} (d:{}, h:{}, k:{})", area, d, h, self.factor)
+        }
     }
 }
 
@@ -259,41 +262,22 @@ const CIRCUMSCRIBED: &str = if cfg!(feature = "lang_rus") {
     "Circumscribed circle"
 };
 
-//const INSCRIBED: &str = if cfg!(feature = "lang_rus") {
-//    "Вписанная окружность"
-//} else {
-//    "Inscribed circle"
-//};
-
 const HEXAGON: &str = if cfg!(feature = "lang_rus") {
     "Шестиугольник"
 } else {
     "Hexagon"
 };
 
-fn hexagon_string (area: f64, d: f64, f: f64, circumscribed: bool) -> String {
-    if circumscribed {
-        if cfg! (feature = "lang_rus") {
-            format!("Шестиугольник S={} (D:{}, k:{})", area, d, f)
-        } else {
-            format!("Hexagon S={} (D:{}, k:{})", area, d, f)
-        }
-    } else {
-        if cfg! (feature = "lang_rus") {
-            format!("Шестиугольник s={} (d:{}, k:{})", area, d, f)
-        } else {
-            format!("Hexagon s={} (d:{}, k:{})", area, d, f)
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct AreaHexagon {
-    state: [FormElement; 6]
+    state: [FormElement; 6],
+    diameter: f64,
+    factor: f64,
+    circumscribed: bool,
 }
 
 impl Default for AreaHexagon {
-    fn default()-> Self {
+    fn default() -> Self {
         Self {
             state: [
                 FormElement::InputField(DIAMETER_HEX, String::new()),
@@ -302,43 +286,57 @@ impl Default for AreaHexagon {
                 FormElement::NoElement,
                 FormElement::NoElement,
                 FormElement::NoElement,
-            ]
+            ],
+            diameter: 0.,
+            factor: 1.,
+            circumscribed: false,
         }
     }
 }
 
-impl AreaShape for AreaHexagon {
-    fn form_state(&mut self) -> &mut [FormElement; 6] {
-        helpers::std_validate_state(& mut self.state);
+impl InnerImplShape for AreaHexagon {
+    fn state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(&mut self.state);
         &mut self.state
     }
 
-    fn name (&self) -> & str{
+    fn get_name(&self) -> &str {
         HEXAGON
     }
 
-    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
-        let d = helpers::get_number(&self.state[0], input_factor)?;
-        let f = helpers::get_factor(&self.state[1])?;
-        if let FormElement::CheckBox(_,  circumscribed) = self.state[2] {
-            let area;
-            if circumscribed {
-                area = 3. * f64::sqrt(3.) / 2. * d * d / 4. * f / output_factor;
+    fn parse_input(&mut self, input_factor: f64) -> Result<(), &'static str> {
+        let mut negative = false;
+        self.diameter = helpers::get_lenght(&self.state[0], input_factor, &mut negative)?;
+        self.factor = helpers::get_factor(&self.state[1], negative)?;
+        self.circumscribed = helpers::get_option(&self.state[2])?;
+        Ok(())
+    }
+
+    fn get_area(&self) -> f64 {
+        let area;
+        if self.circumscribed {
+            area = 3. * f64::sqrt(3.) / 2. * self.diameter * self.diameter / 4. * self.factor;
+        } else {
+            area = 2. * f64::sqrt(3.) * self.diameter * self.diameter / 4. * self.factor;
+        }
+        area
+    }
+
+    fn get_result(&self, input_factor: f64, area: f64) -> String {
+        let d = self.diameter / input_factor;
+        if self.circumscribed {
+            if cfg!(feature = "lang_rus") {
+                format!("Шестиугольник S={} (D:{}, k:{})", area, d, self.factor)
             } else {
-                area = 2. * f64::sqrt(3.) * d * d / 4. * f / output_factor;
+                format!("Hexagon S={} (D:{}, k:{})", area, d, self.factor)
             }
-            if !area.is_finite() {
-                return None;
+        } else {
+            if cfg!(feature = "lang_rus") {
+                format!("Шестиугольник s={} (d:{}, k:{})", area, d, self.factor)
+            } else {
+                format!("Hexagon s={} (d:{}, k:{})", area, d, self.factor)
             }
-            return Some(
-                CalculationResult {
-                    area,
-                    result: hexagon_string(area, d, f, circumscribed),
-                    shape: self.duplicate()
-                }
-            )
-        };
-        None
+        }
     }
 }
 
@@ -354,28 +352,17 @@ const HEX_PRISM_HEIGHT: &str = if cfg!(feature = "lang_rus") {
     "Height"
 };
 
-fn hexagon_prism_string (area: f64, d: f64, h: f64, f: f64, circumscribed: bool) -> String {
-    if circumscribed {
-        if cfg! (feature = "lang_rus") {
-            format!("Призма (N=6) S={} (D:{}, h:{}, k:{})", area, d, h, f)
-        } else {
-            format!("Hexagon prism S={} (D:{}, h:{}, k:{})", area, d, h, f)
-        }
-    } else {
-        if cfg! (feature = "lang_rus") {
-            format!("Призма (N=6) S={} (d:{}, h:{}, k:{})", area, d, h, f)
-        } else {
-            format!("Hexagon prism S={} (d:{}, h:{}, k:{})", area, d, h, f)
-        }
-    }
-}
 #[derive(Clone)]
 pub struct AreaHexagonPrism {
-    state: [FormElement; 6]
+    state: [FormElement; 6],
+    diameter: f64,
+    height: f64,
+    factor: f64,
+    circumscribed: bool,
 }
 
 impl Default for AreaHexagonPrism {
-    fn default()-> Self {
+    fn default() -> Self {
         Self {
             state: [
                 FormElement::InputField(DIAMETER_HEX, String::new()),
@@ -384,43 +371,71 @@ impl Default for AreaHexagonPrism {
                 FormElement::CheckBox(CIRCUMSCRIBED, false),
                 FormElement::NoElement,
                 FormElement::NoElement,
-            ]
+            ],
+            diameter: 0.,
+            height: 0.,
+            factor: 1.,
+            circumscribed: false,
         }
     }
 }
-impl AreaShape for AreaHexagonPrism {
-    fn form_state(&mut self) -> &mut [FormElement; 6] {
-        helpers::std_validate_state(& mut self.state);
+impl InnerImplShape for AreaHexagonPrism {
+    fn state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(&mut self.state);
         &mut self.state
     }
 
-    fn name (&self) -> & str{
+    fn get_name(&self) -> &str {
         HEX_PRISM
     }
 
-    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
-        let d = helpers::get_number(&self.state[0], input_factor)?;
-        let h = helpers::get_number(&self.state[1], input_factor)?;
-        let f = helpers::get_factor(&self.state[2])?;
-        if let FormElement::CheckBox(_,  circumscribed) = self.state[3] {
-            let area;
-            if circumscribed {
-                area = 6. * d / 2. * h * f / output_factor;
+    fn parse_input(&mut self, input_factor: f64) -> Result<(), &'static str> {
+        let mut negative = false;
+        self.diameter = helpers::get_lenght(&self.state[0], input_factor, &mut negative)?;
+        self.height = helpers::get_lenght(&self.state[1], input_factor, &mut negative)?;
+        self.factor = helpers::get_factor(&self.state[2], negative)?;
+        self.circumscribed = helpers::get_option(&self.state[3])?;
+        Ok(())
+    }
+
+    fn get_area(&self) -> f64 {
+        let area;
+        if self.circumscribed {
+            area = 6. * self.diameter / 2. * self.height * self.factor;
+        } else {
+            area = 6. * self.diameter * 2. / f64::sqrt(3.) / 2. * self.height * self.factor;
+        }
+        area
+    }
+
+    fn get_result(&self, input_factor: f64, area: f64) -> String {
+        let h = self.height / input_factor;
+        let d = self.diameter / input_factor;
+        if self.circumscribed {
+            if cfg!(feature = "lang_rus") {
+                format!(
+                    "Призма (N=6) S={} (D:{}, h:{}, k:{})",
+                    area, d, h, self.factor
+                )
             } else {
-                area = 6. * d * 2. / f64::sqrt(3.) / 2. * h * f / output_factor;
+                format!(
+                    "Hexagon prism S={} (D:{}, h:{}, k:{})",
+                    area, d, h, self.factor
+                )
             }
-            if !area.is_finite() {
-                return None;
+        } else {
+            if cfg!(feature = "lang_rus") {
+                format!(
+                    "Призма (N=6) S={} (d:{}, h:{}, k:{})",
+                    area, d, h, self.factor
+                )
+            } else {
+                format!(
+                    "Hexagon prism S={} (d:{}, h:{}, k:{})",
+                    area, d, h, self.factor
+                )
             }
-            return Some(
-                CalculationResult {
-                    area,
-                    result: hexagon_prism_string(area, d, h, f, circumscribed),
-                    shape: self.duplicate()
-                }
-            )
-        };
-        None
+        }
     }
 }
 
@@ -448,20 +463,17 @@ const BUSHING_INNER_DIAMETER: &str = if cfg!(feature = "lang_rus") {
     "Inner diameter"
 };
 
-fn bushing_string (area: f64, d1: f64, d2: f64, h: f64, f: f64) -> String{
-    if cfg!(feature = "lang_rus") {
-        format!("Втулка S={} (D:{}, d:{}, h:{}, k:{})", area, d1, d2, h, f)
-    } else {
-        format!("Bushing S={} (D:{}, d:{}, h:{}, k:{})", area, d1, d2, h, f)
-    }
-}
 #[derive(Clone)]
 pub struct AreaBushing {
-    state: [FormElement; 6]
+    state: [FormElement; 6],
+    diameter: f64,
+    inner_diameter: f64,
+    height: f64,
+    factor: f64,
 }
 
 impl Default for AreaBushing {
-    fn default()-> Self {
+    fn default() -> Self {
         Self {
             state: [
                 FormElement::InputField(BUSHING_DIAMETER, String::new()),
@@ -470,37 +482,55 @@ impl Default for AreaBushing {
                 FormElement::FactorField(String::new()),
                 FormElement::NoElement,
                 FormElement::NoElement,
-            ]
+            ],
+            diameter: 0.,
+            inner_diameter: 0.,
+            height: 0.,
+            factor: 1.,
         }
     }
 }
 
-impl AreaShape for AreaBushing {
-    fn form_state(&mut self) -> &mut [FormElement; 6] {
-        helpers::std_validate_state(& mut self.state);
+impl InnerImplShape for AreaBushing {
+    fn state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(&mut self.state);
         &mut self.state
     }
 
-    fn name (&self) -> & str{
+    fn get_name(&self) -> &str {
         BUSHING
     }
 
-    fn calculate(&self, input_factor: f64, output_factor: f64) -> Option<CalculationResult> {
-        let d1 = helpers::get_number(&self.state[0], input_factor)?;
-        let d2 = helpers::get_number(&self.state[1], input_factor)?;
-        let h = helpers::get_number(&self.state[2], input_factor)?;
-        let f = helpers::get_factor(&self.state[3])?;
-        let area = ((d1 + d2) * std::f64::consts::PI * h * f
-            + f * std::f64::consts::PI * (d1 * d1 - d2 * d2) / 4.0) / output_factor;
-        if !area.is_finite() ||  d1 <= d2  {
-            return None;
+    fn parse_input(&mut self, input_factor: f64) -> Result<(), &'static str> {
+        let mut negative = false;
+        self.diameter = helpers::get_lenght(&self.state[0], input_factor, &mut negative)?;
+        self.inner_diameter = helpers::get_lenght(&self.state[1], input_factor, &mut negative)?;
+        self.height = helpers::get_lenght(&self.state[2], input_factor, &mut negative)?;
+        self.factor = helpers::get_factor(&self.state[3], negative)?;
+        Ok(())
+    }
+    fn get_area(&self) -> f64 {
+        ((self.diameter + self.inner_diameter) * std::f64::consts::PI * self.height
+            + std::f64::consts::PI
+                * (self.diameter * self.diameter - self.inner_diameter * self.inner_diameter)
+                / 4.0)
+            * self.factor
+    }
+
+    fn get_result(&self, input_factor: f64, area: f64) -> String {
+        let d1 = self.diameter / input_factor;
+        let d2 = self.inner_diameter / input_factor;
+        let h = self.height / input_factor;
+        if cfg!(feature = "lang_rus") {
+            format!(
+                "Втулка S={} (D:{}, d:{}, h:{}, k:{})",
+                area, d1, d2, h, self.factor
+            )
+        } else {
+            format!(
+                "Bushing S={} (D:{}, d:{}, h:{}, k:{})",
+                area, d1, d2, h, self.factor
+            )
         }
-        Some(
-            CalculationResult{
-                area,
-                result: bushing_string(area, d1, d2, h, f),
-                shape: self.duplicate()
-            }
-        )
     }
 }
