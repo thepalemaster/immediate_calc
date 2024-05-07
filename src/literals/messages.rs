@@ -51,3 +51,9 @@ pub const SHAPE_FAIL: &str = if cfg!(feature = "lang_rus") {
 } else {
     "Unknown shape"
 };
+
+pub const WRONG_BUSHING: &str = if cfg!(feature = "lang_rus") {
+    "Внутренний диаметр должен быть меньше внешнего"
+} else {
+    "The inner diameter must be smaller than the outer"
+};

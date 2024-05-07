@@ -3,6 +3,7 @@ mod parser;
 
 use super::FormElement;
 use super::InnerImplShape;
+use crate::literals;
 
 const CIRCLE: &str = if cfg!(feature = "lang_rus") {
     "Круг"
@@ -313,13 +314,11 @@ impl InnerImplShape for AreaHexagon {
     }
 
     fn get_area(&self) -> f64 {
-        let area;
         if self.circumscribed {
-            area = 3. * f64::sqrt(3.) / 2. * self.diameter * self.diameter / 4. * self.factor;
+            3. * f64::sqrt(3.) / 2. * self.diameter * self.diameter / 4. * self.factor
         } else {
-            area = 2. * f64::sqrt(3.) * self.diameter * self.diameter / 4. * self.factor;
+            2. * f64::sqrt(3.) * self.diameter * self.diameter / 4. * self.factor
         }
-        area
     }
 
     fn get_result(&self, input_factor: f64, area: f64) -> String {
@@ -399,13 +398,11 @@ impl InnerImplShape for AreaHexagonPrism {
     }
 
     fn get_area(&self) -> f64 {
-        let area;
         if self.circumscribed {
-            area = 6. * self.diameter / 2. * self.height * self.factor;
+            6. * self.diameter / 2. * self.height * self.factor
         } else {
-            area = 6. * self.diameter * 2. / f64::sqrt(3.) / 2. * self.height * self.factor;
+            6. * self.diameter * 2. / f64::sqrt(3.) / 2. * self.height * self.factor
         }
-        area
     }
 
     fn get_result(&self, input_factor: f64, area: f64) -> String {
@@ -507,6 +504,9 @@ impl InnerImplShape for AreaBushing {
         self.inner_diameter = helpers::get_lenght(&self.state[1], input_factor, &mut negative)?;
         self.height = helpers::get_lenght(&self.state[2], input_factor, &mut negative)?;
         self.factor = helpers::get_factor(&self.state[3], negative)?;
+        if self.diameter <= self.inner_diameter {
+            return Err(literals::messages::WRONG_BUSHING);
+        }
         Ok(())
     }
     fn get_area(&self) -> f64 {
@@ -530,6 +530,101 @@ impl InnerImplShape for AreaBushing {
             format!(
                 "Bushing S={} (D:{}, d:{}, h:{}, k:{})",
                 area, d1, d2, h, self.factor
+            )
+        }
+    }
+}
+
+const CUBOID: &str = if cfg!(feature = "lang_rus") {
+    "Параллелепипед"
+} else {
+    "Cuboid"
+};
+
+const CUBOID_HEIGHT: &str = if cfg!(feature = "lang_rus") {
+    "Высота"
+} else {
+    "Height"
+};
+
+const CUBOID_BREADTH: &str = if cfg!(feature = "lang_rus") {
+    "Глубина"
+} else {
+    "Breadth"
+};
+
+const CUBOID_WIDTH: &str = if cfg!(feature = "lang_rus") {
+    "Ширина"
+} else {
+    "Width"
+};
+
+#[derive(Clone)]
+pub struct AreaCuboid {
+    state: [FormElement; 6],
+    breadth: f64,
+    height: f64,
+    width: f64,
+    factor: f64,
+}
+
+impl Default for AreaCuboid {
+    fn default() -> Self {
+        Self {
+            state: [
+                FormElement::InputField(CUBOID_HEIGHT, String::new()),
+                FormElement::InputField(CUBOID_BREADTH, String::new()),
+                FormElement::InputField(CUBOID_WIDTH, String::new()),
+                FormElement::FactorField(String::new()),
+                FormElement::NoElement,
+                FormElement::NoElement,
+            ],
+            breadth: 0.,
+            height: 0.,
+            width: 0.,
+            factor: 1.,
+        }
+    }
+}
+
+impl InnerImplShape for AreaCuboid {
+    fn state(&mut self) -> &mut [FormElement; 6] {
+        helpers::std_validate_state(&mut self.state);
+        &mut self.state
+    }
+
+    fn get_name(&self) -> &str {
+        CUBOID
+    }
+
+    fn parse_input(&mut self, input_factor: f64) -> Result<(), &'static str> {
+        let mut negative = false;
+        self.height = helpers::get_lenght(&self.state[0], input_factor, &mut negative)?;
+        self.breadth = helpers::get_lenght(&self.state[1], input_factor, &mut negative)?;
+        self.width = helpers::get_lenght(&self.state[2], input_factor, &mut negative)?;
+        self.factor = helpers::get_factor(&self.state[3], negative)?;
+        Ok(())
+    }
+    fn get_area(&self) -> f64 {
+        (2.0 * self.width * self.breadth +
+        2.0 * self.width * self.height +
+        2.0 * self.breadth * self.height)
+        * self.factor
+    }
+
+    fn get_result(&self, input_factor: f64, area: f64) -> String {
+        let a = self.height / input_factor;
+        let b = self.breadth / input_factor;
+        let c = self.width / input_factor;
+        if cfg!(feature = "lang_rus") {
+            format!(
+                "Параллелепипед S={} (a:{}, b:{}, c:{}, k:{})",
+                area, a, b, c, self.factor
+            )
+        } else {
+            format!(
+                "Cuboid S={} (a:{}, b:{}, c:{}, k:{})",
+                area, a, b, c, self.factor
             )
         }
     }

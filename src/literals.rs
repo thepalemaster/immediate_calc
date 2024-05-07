@@ -21,7 +21,7 @@ pub const OUTPUT_UNITS: &str = if cfg!(feature = "lang_rus") {
 };
 
 pub const FACTOR: &str = if cfg!(feature = "lang_rus") {
-    "Коэфицент"
+    "Коэффицент"
 } else {
     "Factor"
 };

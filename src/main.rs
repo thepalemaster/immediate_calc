@@ -1,11 +1,15 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::sync::Arc;
 
 use eframe::egui;
 use egui::IconData;
+
 mod calculator;
 pub mod literals;
 mod shapes;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), eframe::Error> {
     let icon = include_bytes!("../assets/icon.rgb").to_vec();
     let window_size = egui::ViewportBuilder {
@@ -27,4 +31,21 @@ fn main() -> Result<(), eframe::Error> {
         options,
         Box::new(|_cc| Box::<calculator::Calculator>::default()),
     )
+}
+
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+    console_error_panic_hook::set_once();
+    let web_options = eframe::WebOptions::default();
+    wasm_bindgen_futures::spawn_local(async {
+        eframe::WebRunner::new()
+            .start(
+                "the_canvas_id",
+                web_options,
+                Box::new(|cc| Box::<calculator::Calculator>::default()),
+            )
+            .await
+            .expect("failed to start calculator-wasm");
+    });
 }

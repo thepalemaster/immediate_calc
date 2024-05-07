@@ -78,6 +78,7 @@ pub fn get_shapes() -> Vec<Box<dyn AreaShape>> {
         Box::<AreaHexagon>::default(),
         Box::<AreaHexagonPrism>::default(),
         Box::<AreaBushing>::default(),
+        Box::<AreaCuboid>::default(),
     ]
 }
 

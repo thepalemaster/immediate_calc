@@ -10,11 +10,12 @@ use literals::messages;
 mod calculator_state;
 mod measure;
 
+//mod clipboard;
+
 enum ViewFlags {
     NoFlags,
     Remove(usize),
     Modal(usize),
-    //Message(&str)
 }
 
 pub struct Calculator {
@@ -143,7 +144,10 @@ impl eframe::App for Calculator {
         egui::CentralPanel::default().show(ctx, |ui| {
             let spacing = ui.spacing().item_spacing.x;
             self.shape_chooser(ui);
-            ui.label(self.state.get_shapes()[self.current].name());
+            ui.label(
+                egui::RichText::new(self.state.get_shapes()[self.current].name())
+                    .size(literals::STEP / 2.),
+            );
             let shape = self.state.form_state(self.current);
             match shape {
                 Some(form) => {
@@ -224,7 +228,6 @@ impl eframe::App for Calculator {
                         self.calculation_list(ui);
                     })
             });
-            //println!("{}", ui.ctx().input(|i| i.time));
             match self.flags {
                 ViewFlags::Modal(index) => {
                     let modal = Modal::new(ctx, "edit_modal");
@@ -262,7 +265,12 @@ impl eframe::App for Calculator {
             }
         });
         if ctx.input(|i| i.key_released(Key::Enter)) {
-            self.calculate();
+            if let ViewFlags::Modal(index) = self.flags {
+                self.state.recalculate(index);
+                self.flags = ViewFlags::NoFlags;
+            } else {
+                self.calculate();
+            }
         }
     }
 }
